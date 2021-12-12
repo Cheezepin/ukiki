@@ -15,6 +15,7 @@
 
 #include "actors/common0.h"
 #include "actors/common1.h"
+#include "actors/group0.h"
 #include "actors/group1.h"
 #include "actors/group2.h"
 #include "actors/group3.h"
@@ -5079,7 +5080,6 @@ const BehaviorScript bhvYoshi[] = {
 const BehaviorScript bhvKoopa[] = {
     BEGIN(OBJ_LIST_PUSHABLE),
     OR_INT(oFlags, (OBJ_FLAG_COMPUTE_ANGLE_TO_MARIO | OBJ_FLAG_COMPUTE_DIST_TO_MARIO | OBJ_FLAG_UPDATE_GFX_POS_AND_ANGLE)),
-    DROP_TO_FLOOR(),
     LOAD_ANIMATIONS(oAnimations, koopa_seg6_anims_06011364),
     ANIMATE(9),
     SET_HOME(),
@@ -6104,6 +6104,22 @@ const BehaviorScript bhvIntroScene[] = {
     OR_INT(oFlags, OBJ_FLAG_UPDATE_GFX_POS_AND_ANGLE),
     BEGIN_LOOP(),
         CALL_NATIVE(bhv_intro_scene_loop),
+    END_LOOP(),
+};
+
+const BehaviorScript bhvUkikiControl[] = {
+    BEGIN(OBJ_LIST_GENACTOR),
+    OR_INT(oFlags, (OBJ_FLAG_COMPUTE_ANGLE_TO_MARIO | OBJ_FLAG_HOLDABLE | OBJ_FLAG_COMPUTE_DIST_TO_MARIO | OBJ_FLAG_SET_FACE_YAW_TO_MOVE_YAW | OBJ_FLAG_UPDATE_GFX_POS_AND_ANGLE)),
+    SET_INTERACT_TYPE(INTERACT_BOUNCE_TOP),
+    SET_HITBOX(/*Radius*/ 40, /*Height*/ 40),
+    SET_INT(oIntangibleTimer, 0),
+    LOAD_ANIMATIONS(oAnimations, ukiki_seg5_anims_05015784),
+    ANIMATE(0),
+    SET_OBJ_PHYSICS(/*Wall hitbox radius*/ 30, /*Gravity*/ -400, /*Bounciness*/ 50, /*Drag strength*/ 0, /*Friction*/ 20, /*Buoyancy*/ 200, /*Unused*/ 0, 0),
+    SET_HOME(),
+    CALL_NATIVE(bhv_ukiki_init),
+    BEGIN_LOOP(),
+        CALL_NATIVE(bhv_ukiki_core_update),
     END_LOOP(),
 };
 

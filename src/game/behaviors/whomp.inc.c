@@ -278,6 +278,9 @@ void (*sWhompActions[])(void) = {
 };
 
 void bhv_whomp_loop(void) {
+    f32 dist = 0;
+    struct Object *ukiki = cur_obj_find_nearest_object_with_behavior(bhvUkikiControl, &dist);
+
     cur_obj_update_floor_and_walls();
     cur_obj_call_action_function(sWhompActions);
     cur_obj_move_standard(-20);
@@ -288,5 +291,9 @@ void bhv_whomp_loop(void) {
             cur_obj_hide_if_mario_far_away_y(1000.0f);
         }
         load_object_collision_model();
+    }
+
+    if(dist < 200.0f && o->oAction < 8) {
+        o->oAction = 8;
     }
 }

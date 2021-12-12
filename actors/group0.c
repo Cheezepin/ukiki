@@ -25,3 +25,7 @@
 #include "white_particle_small/model.inc.c"
 
 #include "sparkle_animation/model.inc.c"
+
+#include "ukiki/model.inc.c"
+#include "ukiki/anims/data.inc.c"
+#include "ukiki/anims/table.inc.c"

@@ -7,9 +7,12 @@ void bhv_wf_solid_tower_platform_loop(void) {
 }
 
 void bhv_wf_elevator_tower_platform_loop(void) {
+    struct Object *obj;
+    f32 dist;
+    if(gCurrentCharacter == CHARACTER_UKIKI) {obj = cur_obj_find_nearest_object_with_behavior(bhvUkikiControl, &dist);}
     switch (o->oAction) {
         case 0:
-            if (gMarioObject->platform == o) {
+            if (gMarioObject->platform == o || (obj != 0 && lateral_dist_between_objects(obj, o) < 125.0f)) {
                 o->oAction++;
             }
             break;
@@ -110,9 +113,14 @@ void spawn_wf_platform_group(void) {
 }
 
 void bhv_tower_platform_group_loop(void) {
-    f32 marioY = gMarioObject->oPosY;
+    f32 dist;
+    f32 marioY;
+    struct Object *obj = gMarioObject;
+    if(gCurrentCharacter == CHARACTER_UKIKI) {obj = cur_obj_find_nearest_object_with_behavior(bhvUkikiControl, &dist);}
 
-    o->oDistanceToMario = dist_between_objects(o, gMarioObject);
+    marioY = obj->oPosY;
+
+    o->oDistanceToMario = dist_between_objects(o, obj);
 
     switch (o->oAction) {
         case 0:

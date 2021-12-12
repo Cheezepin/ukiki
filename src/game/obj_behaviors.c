@@ -498,6 +498,18 @@ s8 is_point_within_radius_of_mario(f32 x, f32 y, f32 z, s32 dist) {
     f32 mGfxX = gMarioObject->header.gfx.pos[0];
     f32 mGfxY = gMarioObject->header.gfx.pos[1];
     f32 mGfxZ = gMarioObject->header.gfx.pos[2];
+    struct Object *marioStandIn;
+
+    switch(gCurrentCharacter) {
+        case CHARACTER_UKIKI:
+            marioStandIn = find_any_object_with_behavior(bhvUkikiControl);
+            mGfxX = marioStandIn->oPosX;
+            mGfxY = marioStandIn->oPosY;
+            mGfxZ = marioStandIn->oPosZ;
+            break;
+        default:
+            break;
+    }
 
     if ((x - mGfxX) * (x - mGfxX) + (y - mGfxY) * (y - mGfxY) + (z - mGfxZ) * (z - mGfxZ)
         < (f32)(dist * dist)) {

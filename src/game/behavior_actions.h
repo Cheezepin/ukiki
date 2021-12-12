@@ -93,6 +93,7 @@ void bhv_wind_loop(void);
 void bhv_unused_particle_spawn_loop(void);
 void bhv_ukiki_cage_star_loop(void);
 void bhv_ukiki_cage_loop(void);
+void bhv_ukiki_core_update(void);
 void bhv_bitfs_sinking_platform_loop(void);
 void bhv_bitfs_sinking_cage_platform_loop(void);
 void bhv_ddd_moving_pole_loop(void);

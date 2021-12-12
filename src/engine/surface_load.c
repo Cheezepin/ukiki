@@ -9,6 +9,7 @@
 #include "game/object_helpers.h"
 #include "game/macro_special_objects.h"
 #include "surface_collision.h"
+#include "game/level_update.h"
 #include "game/mario.h"
 #include "game/object_list_processor.h"
 #include "surface_load.h"
@@ -753,7 +754,7 @@ void load_object_surfaces(s16 **data, s16 *vertexData) {
  * Transform an object's vertices, reload them, and render the object.
  */
 void load_object_collision_model(void) {
-    UNUSED u8 filler[4];
+    UNUSED s32 unused;
     s16 vertexData[600];
 
     s16 *collisionData = gCurrentObject->collisionData;
@@ -762,8 +763,16 @@ void load_object_collision_model(void) {
 
     // On an object's first frame, the distance is set to 19000.0f.
     // If the distance hasn't been updated, update it now.
-    if (gCurrentObject->oDistanceToMario == 19000.0f) {
+    if (gCurrentObject->oDistanceToMario == 19000.0f || (gTimeStopState & TIME_STOP_ACTIVE)) {
         marioDist = dist_between_objects(gCurrentObject, gMarioObject);
+    }
+
+    if(gCurrentCharacter > 0) {
+        switch(gCurrentCharacter) {
+            case CHARACTER_UKIKI:
+                marioDist = dist_between_objects(gCurrentObject, find_any_object_with_behavior(bhvUkikiControl));
+                break;
+        }
     }
 
     // If the object collision is supposed to be loaded more than the
@@ -773,7 +782,7 @@ void load_object_collision_model(void) {
     }
 
     // Update if no Time Stop, in range, and in the current room.
-    if (!(gTimeStopState & TIME_STOP_ACTIVE) && marioDist < tangibleDist
+    if (/*!(gTimeStopState & TIME_STOP_ACTIVE) && */marioDist < tangibleDist
         && !(gCurrentObject->activeFlags & ACTIVE_FLAG_IN_DIFFERENT_ROOM)) {
         collisionData++;
         transform_object_vertices(&collisionData, vertexData);

@@ -432,4 +432,8 @@
 
 #define C_BUTTONS     (U_CBUTTONS | D_CBUTTONS | L_CBUTTONS | R_CBUTTONS   )
 
+#define CHARACTER_UKIKI 1
+
+#define POW2(x) ((x) * (x))
+
 #endif // SM64_H

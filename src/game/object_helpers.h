@@ -192,6 +192,7 @@ void cur_obj_spawn_loot_coin_at_mario_pos(void);
 s32 cur_obj_advance_looping_anim(void);
 s32 cur_obj_resolve_wall_collisions(void);
 void cur_obj_update_floor_and_walls(void);
+void cur_obj_update_floor_and_walls_and_ceil(f32 ceilOffset);
 void cur_obj_move_standard(s16 steepSlopeAngleDegrees);
 void cur_obj_move_using_vel_and_gravity(void);
 void cur_obj_move_using_fvel_and_gravity(void);
@@ -279,6 +280,7 @@ void enable_time_stop_including_mario(void);
 void disable_time_stop_including_mario(void);
 s32 cur_obj_check_interacted(void);
 void cur_obj_spawn_loot_blue_coin(void);
+struct Object *find_any_object_with_behavior(const BehaviorScript *behavior);
 
 #ifndef VERSION_JP
 void cur_obj_spawn_star_at_y_offset(f32 targetX, f32 targetY, f32 targetZ, f32 offsetY);

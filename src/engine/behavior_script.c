@@ -6,6 +6,7 @@
 #include "game/area.h"
 #include "game/behavior_actions.h"
 #include "game/game_init.h"
+#include "game/level_update.h"
 #include "game/mario.h"
 #include "game/memory.h"
 #include "game/obj_behaviors_2.h"
@@ -904,7 +905,7 @@ static BhvCommandProc BehaviorCmdTable[] = {
 
 // Execute the behavior script of the current object, process the object flags, and other miscellaneous code for updating objects.
 void cur_obj_update(void) {
-    UNUSED u8 filler[4];
+    UNUSED u32 unused;
 
     s16 objFlags = gCurrentObject->oFlags;
     f32 distanceFromMario;
@@ -913,7 +914,14 @@ void cur_obj_update(void) {
 
     // Calculate the distance from the object to Mario.
     if (objFlags & OBJ_FLAG_COMPUTE_DIST_TO_MARIO) {
-        gCurrentObject->oDistanceToMario = dist_between_objects(gCurrentObject, gMarioObject);
+        switch(gCurrentCharacter) {
+            default:
+                gCurrentObject->oDistanceToMario = dist_between_objects(gCurrentObject, gMarioObject);
+                break;
+            case CHARACTER_UKIKI:
+                gCurrentObject->oDistanceToMario = dist_between_objects(gCurrentObject, find_any_object_with_behavior(bhvUkikiControl));
+                break;
+        }
         distanceFromMario = gCurrentObject->oDistanceToMario;
     } else {
         distanceFromMario = 0.0f;
@@ -921,7 +929,14 @@ void cur_obj_update(void) {
 
     // Calculate the angle from the object to Mario.
     if (objFlags & OBJ_FLAG_COMPUTE_ANGLE_TO_MARIO) {
-        gCurrentObject->oAngleToMario = obj_angle_to_object(gCurrentObject, gMarioObject);
+        switch(gCurrentCharacter) {
+            default:
+                gCurrentObject->oAngleToMario = obj_angle_to_object(gCurrentObject, gMarioObject);
+                break;
+            case CHARACTER_UKIKI:
+                gCurrentObject->oAngleToMario = obj_angle_to_object(gCurrentObject, find_any_object_with_behavior(bhvUkikiControl));
+                break;
+        }
     }
 
     // If the object's action has changed, reset the action timer.

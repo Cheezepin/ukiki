@@ -1746,6 +1746,13 @@ s32 execute_mario_action(UNUSED struct Object *o) {
             }
         }
 
+        if(((gMarioState->action & ACT_GROUP_MASK) == ACT_GROUP_STATIONARY || (gMarioState->action & ACT_GROUP_MASK) == ACT_GROUP_MOVING) && gCurrCourseNum > 0 && !find_any_object_with_behavior(bhvUkikiControl)) {
+            struct Object *ukiki = spawn_object(gMarioObject, MODEL_UKIKI, bhvUkikiControl);
+            ukiki->oPosX += 250.0f;
+            ukiki->oPosY += 250.0f;
+            ukiki->oPosZ += 250.0f;
+        }
+
         sink_mario_in_quicksand(gMarioState);
         squish_mario_model(gMarioState);
         set_submerged_cam_preset_and_spawn_bubbles(gMarioState);
@@ -1788,6 +1795,7 @@ s32 execute_mario_action(UNUSED struct Object *o) {
 void init_mario(void) {
     Vec3s capPos;
     struct Object *capObject;
+    struct Object *ukiki;
 
     unused80339F10 = 0;
 
@@ -1797,13 +1805,13 @@ void init_mario(void) {
 
     gMarioState->invincTimer = 0;
 
-    if (save_file_get_flags()
-        & (SAVE_FLAG_CAP_ON_GROUND | SAVE_FLAG_CAP_ON_KLEPTO | SAVE_FLAG_CAP_ON_UKIKI
-           | SAVE_FLAG_CAP_ON_MR_BLIZZARD)) {
-        gMarioState->flags = 0;
-    } else {
+    // if (save_file_get_flags()
+    //     & (SAVE_FLAG_CAP_ON_GROUND | SAVE_FLAG_CAP_ON_KLEPTO | SAVE_FLAG_CAP_ON_UKIKI
+    //        | SAVE_FLAG_CAP_ON_MR_BLIZZARD)) {
+    //     gMarioState->flags = 0;
+    // } else {
         gMarioState->flags = (MARIO_NORMAL_CAP | MARIO_CAP_ON_HEAD);
-    }
+    // }
 
     gMarioState->forwardVel = 0.0f;
     gMarioState->squishTimer = 0;

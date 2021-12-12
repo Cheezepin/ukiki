@@ -182,6 +182,8 @@ s8 sWarpCheckpointActive = FALSE;
 u8 unused2[4];
 u8 unused3[2];
 
+s32 gCurrentCharacter = 0;
+
 u16 level_control_timer(s32 timerOp) {
     switch (timerOp) {
         case TIMER_CONTROL_SHOW:

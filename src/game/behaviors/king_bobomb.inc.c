@@ -44,7 +44,10 @@ void king_bobomb_act_0(void) {
 }
 
 s32 mario_is_far_below_object(f32 arg0) {
-    if (arg0 < o->oPosY - gMarioObject->oPosY) {
+    f32 dist;
+    struct Object *obj = gMarioObject;
+    if(gCurrentCharacter == CHARACTER_UKIKI) {obj = cur_obj_find_nearest_object_with_behavior(bhvUkikiControl, &dist);}
+    if (arg0 < o->oPosY - obj->oPosY) {
         return TRUE;
     } else {
         return FALSE;
@@ -200,7 +203,7 @@ void king_bobomb_act_6(void) {
 
 void king_bobomb_act_7(void) {
     cur_obj_init_animation_with_sound(2);
-    if (cur_obj_update_dialog_with_cutscene(MARIO_DIALOG_LOOK_UP, 
+    if (gCurrentCharacter == CHARACTER_UKIKI || cur_obj_update_dialog_with_cutscene(MARIO_DIALOG_LOOK_UP, 
         DIALOG_FLAG_TEXT_DEFAULT, CUTSCENE_DIALOG, DIALOG_116)) {
         create_sound_spawner(SOUND_OBJ_KING_WHOMP_DEATH);
 
@@ -355,12 +358,19 @@ struct SoundState sKingBobombSoundStates[] = {
 };
 
 void king_bobomb_move(void) {
+    f32 dist = 0;
+    struct Object *ukiki = cur_obj_find_nearest_object_with_behavior(bhvUkikiControl, &dist);
+
     cur_obj_update_floor_and_walls();
 
     if (o->oKingBobombUnkF8 == 0) {
         cur_obj_move_standard(-78);
     } else {
         cur_obj_move_using_fvel_and_gravity();
+    }
+
+    if(dist < 300.0f && o->oAction < 7) {
+        o->oAction = 7;
     }
 
     cur_obj_call_action_function(sKingBobombActions);

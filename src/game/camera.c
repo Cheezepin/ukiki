@@ -669,6 +669,11 @@ BAD_RETURN(f32) calc_y_to_curr_floor(f32 *posOff, f32 posMul, f32 posBound, f32 
     f32 floorHeight = sMarioGeometry.currFloorHeight;
     f32 waterHeight;
     UNUSED u8 filler[4];
+    f32 fuckerHeight = sMarioCamState->pos[1];
+    if(gCurrentCharacter == CHARACTER_UKIKI) {
+        fuckerHeight = find_any_object_with_behavior(bhvUkikiControl)->oPosY;
+        floorHeight = find_any_object_with_behavior(bhvUkikiControl)->oFloorHeight;
+    }
 
     if (!(sMarioCamState->action & ACT_FLAG_METAL_WATER)) {
         //! @bug this should use sMarioGeometry.waterHeight
@@ -678,13 +683,13 @@ BAD_RETURN(f32) calc_y_to_curr_floor(f32 *posOff, f32 posMul, f32 posBound, f32 
     }
 
     if (sMarioCamState->action & ACT_FLAG_ON_POLE) {
-        if (sMarioGeometry.currFloorHeight >= gMarioStates[0].usedObj->oPosY && sMarioCamState->pos[1]
+        if (sMarioGeometry.currFloorHeight >= gMarioStates[0].usedObj->oPosY && fuckerHeight
                    < 0.7f * gMarioStates[0].usedObj->hitboxHeight + gMarioStates[0].usedObj->oPosY) {
             posBound = 1200;
         }
     }
 
-    *posOff = (floorHeight - sMarioCamState->pos[1]) * posMul;
+    *posOff = (floorHeight - fuckerHeight) * posMul;
 
     if (*posOff > posBound) {
         *posOff = posBound;
@@ -694,7 +699,7 @@ BAD_RETURN(f32) calc_y_to_curr_floor(f32 *posOff, f32 posMul, f32 posBound, f32 
         *posOff = -posBound;
     }
 
-    *focOff = (floorHeight - sMarioCamState->pos[1]) * focMul;
+    *focOff = (floorHeight - fuckerHeight) * focMul;
 
     if (*focOff > focBound) {
         *focOff = focBound;
@@ -717,6 +722,20 @@ void focus_on_mario(Vec3f focus, Vec3f pos, f32 posYOff, f32 focYOff, f32 dist, 
     focus[0] = sMarioCamState->pos[0];
     focus[1] = sMarioCamState->pos[1] + focYOff;
     focus[2] = sMarioCamState->pos[2];
+}
+
+void focus_on_object(struct Object *obj, Vec3f focus, Vec3f pos, f32 posYOff, f32 focYOff, f32 dist, s16 pitch, s16 yaw) {
+    Vec3f objectPos;
+
+    objectPos[0] = obj->oPosX;
+    objectPos[1] = obj->oPosY + posYOff;
+    objectPos[2] = obj->oPosZ;
+
+    vec3f_set_dist_and_angle(objectPos, pos, dist, pitch + sLakituPitch, yaw);
+
+    focus[0] = obj->oPosX;
+    focus[1] = obj->oPosY + focYOff;
+    focus[2] = obj->oPosZ;
 }
 
 static UNUSED void set_pos_to_mario(Vec3f foc, Vec3f pos, f32 yOff, f32 focYOff, f32 dist, s16 pitch, s16 yaw) {
@@ -773,6 +792,9 @@ void set_camera_height(struct Camera *c, f32 goalHeight) {
     } else {
         camFloorHeight = find_floor(c->pos[0], c->pos[1] + 100.f, c->pos[2], &surface) + baseOff;
         marioFloorHeight = baseOff + sMarioGeometry.currFloorHeight;
+        if(gCurrentCharacter == CHARACTER_UKIKI) {
+            marioFloorHeight = find_any_object_with_behavior(bhvUkikiControl)->oFloorHeight;
+        }
 
         if (camFloorHeight < marioFloorHeight) {
             camFloorHeight = marioFloorHeight;
@@ -929,14 +951,41 @@ s32 update_8_directions_camera(struct Camera *c, Vec3f focus, Vec3f pos) {
     s16 pitch = look_down_slopes(camYaw);
     f32 posY;
     f32 focusY;
-    UNUSED u8 filler[12];
+    UNUSED f32 unused1;
+    UNUSED f32 unused2;
+    UNUSED f32 unused3;
     f32 yOff = 125.f;
     f32 baseDist = 1000.f;
+    struct Object *characterFocus;
+
+    switch (gCurrLevelArea) {
+        case AREA_SA:
+            s8DirModeBaseYaw = 0x4000;
+            gMarioState->pos[0] = 0;
+            break;
+        default:
+            s8DirModeBaseYaw = 0;
+            break;
+    }
 
     sAreaYaw = camYaw;
     calc_y_to_curr_floor(&posY, 1.f, 200.f, &focusY, 0.9f, 200.f);
-    focus_on_mario(focus, pos, posY + yOff, focusY + yOff, sLakituDist + baseDist, pitch, camYaw);
-    pan_ahead_of_player(c);
+    switch (gCurrentCharacter) {
+        case 0:
+            focus_on_mario(focus, pos, posY + yOff, focusY + yOff, sLakituDist + baseDist, pitch, camYaw);
+            pan_ahead_of_player(c);
+            break;
+        case CHARACTER_UKIKI:
+            characterFocus = find_any_object_with_behavior(bhvUkikiControl);
+            if(characterFocus == 0) {
+                gCurrentCharacter = 0;
+            } else {
+                yOff = 100.0f;
+                baseDist = 250.0f;
+                focus_on_object(characterFocus, focus, pos, posY + yOff, focusY + yOff, sLakituDist + baseDist, pitch, camYaw);
+            }
+            break;
+    }
     if (gCurrLevelArea == AREA_DDD_SUB) {
         camYaw = clamp_positions_and_find_yaw(pos, focus, 6839.f, 995.f, 5994.f, -3945.f);
     }
@@ -6566,110 +6615,110 @@ s16 camera_course_processing(struct Camera *c) {
 
     // Area-specific camera processing
     if (!(sStatusFlags & CAM_FLAG_BLOCK_AREA_PROCESSING)) {
-        switch (gCurrLevelArea) {
-            case AREA_WF:
-                if (sMarioCamState->action == ACT_RIDING_HOOT) {
-                    transition_to_camera_mode(c, CAMERA_MODE_SLIDE_HOOT, 60);
-                } else {
-                    switch (sMarioGeometry.currFloorType) {
-                        case SURFACE_CAMERA_8_DIR:
-                            transition_to_camera_mode(c, CAMERA_MODE_8_DIRECTIONS, 90);
-                            s8DirModeBaseYaw = DEGREES(90);
-                            break;
+        // switch (gCurrLevelArea) {
+        //     case AREA_WF:
+        //         if (sMarioCamState->action == ACT_RIDING_HOOT) {
+        //             transition_to_camera_mode(c, CAMERA_MODE_SLIDE_HOOT, 60);
+        //         } else {
+        //             switch (sMarioGeometry.currFloorType) {
+        //                 case SURFACE_CAMERA_8_DIR:
+        //                     transition_to_camera_mode(c, CAMERA_MODE_8_DIRECTIONS, 90);
+        //                     s8DirModeBaseYaw = DEGREES(90);
+        //                     break;
 
-                        case SURFACE_BOSS_FIGHT_CAMERA:
-                            if (gCurrActNum == 1) {
-                                set_camera_mode_boss_fight(c);
-                            } else {
-                                set_camera_mode_radial(c, 60);
-                            }
-                            break;
-                        default:
-                            set_camera_mode_radial(c, 60);
-                    }
-                }
-                break;
+        //                 case SURFACE_BOSS_FIGHT_CAMERA:
+        //                     if (gCurrActNum == 1) {
+        //                         set_camera_mode_boss_fight(c);
+        //                     } else {
+        //                         set_camera_mode_radial(c, 60);
+        //                     }
+        //                     break;
+        //                 default:
+        //                     set_camera_mode_radial(c, 60);
+        //             }
+        //         }
+        //         break;
 
-            case AREA_BBH:
-                // if camera is fixed at bbh_room_13_balcony_camera (but as floats)
-                if (vec3f_compare(sFixedModeBasePosition, 210.f, 420.f, 3109.f) == TRUE) {
-                    if (sMarioCamState->pos[1] < 1800.f) {
-                        transition_to_camera_mode(c, CAMERA_MODE_CLOSE, 30);
-                    }
-                }
-                break;
+        //     case AREA_BBH:
+        //         // if camera is fixed at bbh_room_13_balcony_camera (but as floats)
+        //         if (vec3f_compare(sFixedModeBasePosition, 210.f, 420.f, 3109.f) == TRUE) {
+        //             if (sMarioCamState->pos[1] < 1800.f) {
+        //                 transition_to_camera_mode(c, CAMERA_MODE_CLOSE, 30);
+        //             }
+        //         }
+        //         break;
 
-            case AREA_SSL_PYRAMID:
-                set_mode_if_not_set_by_surface(c, CAMERA_MODE_OUTWARD_RADIAL);
-                break;
+        //     case AREA_SSL_PYRAMID:
+        //         set_mode_if_not_set_by_surface(c, CAMERA_MODE_OUTWARD_RADIAL);
+        //         break;
 
-            case AREA_SSL_OUTSIDE:
-                set_mode_if_not_set_by_surface(c, CAMERA_MODE_RADIAL);
-                break;
+        //     case AREA_SSL_OUTSIDE:
+        //         set_mode_if_not_set_by_surface(c, CAMERA_MODE_RADIAL);
+        //         break;
 
-            case AREA_THI_HUGE:
-                break;
+        //     case AREA_THI_HUGE:
+        //         break;
 
-            case AREA_THI_TINY:
-                surface_type_modes_thi(c);
-                break;
+        //     case AREA_THI_TINY:
+        //         surface_type_modes_thi(c);
+        //         break;
 
-            case AREA_TTC:
-                set_mode_if_not_set_by_surface(c, CAMERA_MODE_OUTWARD_RADIAL);
-                break;
+        //     case AREA_TTC:
+        //         set_mode_if_not_set_by_surface(c, CAMERA_MODE_OUTWARD_RADIAL);
+        //         break;
 
-            case AREA_BOB:
-                if (set_mode_if_not_set_by_surface(c, CAMERA_MODE_NONE) == 0) {
-                    if (sMarioGeometry.currFloorType == SURFACE_BOSS_FIGHT_CAMERA) {
-                        set_camera_mode_boss_fight(c);
-                    } else {
-                        if (c->mode == CAMERA_MODE_CLOSE) {
-                            transition_to_camera_mode(c, CAMERA_MODE_RADIAL, 60);
-                        } else {
-                            set_camera_mode_radial(c, 60);
-                        }
-                    }
-                }
-                break;
+        //     case AREA_BOB:
+        //         if (set_mode_if_not_set_by_surface(c, CAMERA_MODE_NONE) == 0) {
+        //             if (sMarioGeometry.currFloorType == SURFACE_BOSS_FIGHT_CAMERA) {
+        //                 set_camera_mode_boss_fight(c);
+        //             } else {
+        //                 if (c->mode == CAMERA_MODE_CLOSE) {
+        //                     transition_to_camera_mode(c, CAMERA_MODE_RADIAL, 60);
+        //                 } else {
+        //                     set_camera_mode_radial(c, 60);
+        //                 }
+        //             }
+        //         }
+        //         break;
 
-            case AREA_WDW_MAIN:
-                switch (sMarioGeometry.currFloorType) {
-                    case SURFACE_INSTANT_WARP_1B:
-                        c->defMode = CAMERA_MODE_RADIAL;
-                        break;
-                }
-                break;
+        //     case AREA_WDW_MAIN:
+        //         switch (sMarioGeometry.currFloorType) {
+        //             case SURFACE_INSTANT_WARP_1B:
+        //                 c->defMode = CAMERA_MODE_RADIAL;
+        //                 break;
+        //         }
+        //         break;
 
-            case AREA_WDW_TOWN:
-                switch (sMarioGeometry.currFloorType) {
-                    case SURFACE_INSTANT_WARP_1C:
-                        c->defMode = CAMERA_MODE_CLOSE;
-                        break;
-                }
-                break;
+        //     case AREA_WDW_TOWN:
+        //         switch (sMarioGeometry.currFloorType) {
+        //             case SURFACE_INSTANT_WARP_1C:
+        //                 c->defMode = CAMERA_MODE_CLOSE;
+        //                 break;
+        //         }
+        //         break;
 
-            case AREA_DDD_WHIRLPOOL:
-                //! @bug this does nothing
-                gLakituState.defMode = CAMERA_MODE_OUTWARD_RADIAL;
-                break;
+        //     case AREA_DDD_WHIRLPOOL:
+        //         //! @bug this does nothing
+        //         gLakituState.defMode = CAMERA_MODE_OUTWARD_RADIAL;
+        //         break;
 
-            case AREA_DDD_SUB:
-                if ((c->mode != CAMERA_MODE_BEHIND_MARIO)
-                    && (c->mode != CAMERA_MODE_WATER_SURFACE)) {
-                    if (((sMarioCamState->action & ACT_FLAG_ON_POLE) != 0)
-                        || (sMarioGeometry.currFloorHeight > 800.f)) {
-                        transition_to_camera_mode(c, CAMERA_MODE_8_DIRECTIONS, 60);
+        //     case AREA_DDD_SUB:
+        //         if ((c->mode != CAMERA_MODE_BEHIND_MARIO)
+        //             && (c->mode != CAMERA_MODE_WATER_SURFACE)) {
+        //             if (((sMarioCamState->action & ACT_FLAG_ON_POLE) != 0)
+        //                 || (sMarioGeometry.currFloorHeight > 800.f)) {
+        //                 transition_to_camera_mode(c, CAMERA_MODE_8_DIRECTIONS, 60);
 
-                    } else {
-                        if (sMarioCamState->pos[1] < 800.f) {
-                            transition_to_camera_mode(c, CAMERA_MODE_FREE_ROAM, 60);
-                        }
-                    }
-                }
-                //! @bug this does nothing
-                gLakituState.defMode = CAMERA_MODE_FREE_ROAM;
-                break;
-        }
+        //             } else {
+        //                 if (sMarioCamState->pos[1] < 800.f) {
+        //                     transition_to_camera_mode(c, CAMERA_MODE_FREE_ROAM, 60);
+        //                 }
+        //             }
+        //         }
+        //         //! @bug this does nothing
+        //         gLakituState.defMode = CAMERA_MODE_FREE_ROAM;
+        //         break;
+        // }
     }
 
     sStatusFlags &= ~CAM_FLAG_BLOCK_AREA_PROCESSING;

@@ -647,7 +647,8 @@ UNUSED static void obj_unused_die(void) {
     obj_die_if_health_non_positive();
 }
 
-static void obj_set_knockback_action(s32 attackType) {
+void obj_set_knockback_action(s32 attackType) {
+    struct Object *marioObject = gMarioObject;
     switch (attackType) {
         case ATTACK_KICK_OR_TRIP:
         case ATTACK_FAST_ATTACK:
@@ -664,7 +665,15 @@ static void obj_set_knockback_action(s32 attackType) {
     }
 
     o->oFlags &= ~OBJ_FLAG_SET_FACE_YAW_TO_MOVE_YAW;
-    o->oMoveAngleYaw = obj_angle_to_object(gMarioObject, o);
+    switch(gCurrentCharacter) {
+        default:
+            marioObject = gMarioObject;
+            break;
+        case CHARACTER_UKIKI:   
+            marioObject = find_any_object_with_behavior(bhvUkikiControl);
+            break;
+    }
+    o->oMoveAngleYaw = obj_angle_to_object(marioObject, o);
 }
 
 static void obj_set_squished_action(void) {
@@ -879,14 +888,24 @@ static void treat_far_home_as_mario(f32 threshold) {
     f32 dy = o->oHomeY - o->oPosY;
     f32 dz = o->oHomeZ - o->oPosZ;
     f32 distance = sqrtf(dx * dx + dy * dy + dz * dz);
+    struct Object *marioObject = gMarioObject;
+    
+    switch(gCurrentCharacter) {
+        default:
+            marioObject = gMarioObject;
+            break;
+        case CHARACTER_UKIKI:   
+            marioObject = find_any_object_with_behavior(bhvUkikiControl);
+            break;
+    }
 
     if (distance > threshold) {
         o->oAngleToMario = atan2s(dz, dx);
         o->oDistanceToMario = 25000.0f;
     } else {
-        dx = o->oHomeX - gMarioObject->oPosX;
-        dy = o->oHomeY - gMarioObject->oPosY;
-        dz = o->oHomeZ - gMarioObject->oPosZ;
+        dx = o->oHomeX - marioObject->oPosX;
+        dy = o->oHomeY - marioObject->oPosY;
+        dz = o->oHomeZ - marioObject->oPosZ;
         distance = sqrtf(dx * dx + dy * dy + dz * dz);
 
         if (distance > threshold) {

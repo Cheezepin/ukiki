@@ -10,6 +10,11 @@
  * Sets the cap ukiki to its home if Mario is far away
  * or makes him wait to respawn if in water.
  */
+
+#include "game/interaction.h"
+u32 interact_coin(struct MarioState *, u32, struct Object *);
+u32 interact_star_or_key(struct MarioState *, u32, struct Object *);
+
 void handle_cap_ukiki_reset(void) {
     if (o->oBehParams2ndByte == UKIKI_CAP) {
         if (cur_obj_mario_far_away()) {
@@ -639,4 +644,202 @@ void bhv_ukiki_loop(void) {
 
     print_debug_bottom_up("mode   %d\n", o->oAction);
     print_debug_bottom_up("action %d\n", o->oHeldState);
+}
+
+
+s32 ukiki_move_to_intended_yaw(s32 target) {
+    //return approach_s16_symmetric(o->oMoveAngleYaw, target, 0x1000);
+    return target;
+}
+void ukiki_control(void) {
+    f32 controllerMagnitude = sqrtf(POW2(gPlayer1Controller->stickX) + POW2(gPlayer1Controller->stickY));
+    struct Object *pickup = 0;
+    struct Object *coin = 0;
+    struct Object *star = 0;
+    struct Object *star2 = 0;
+    struct Object *star3 = 0;
+    struct Object *star4 = 0;
+    f32 dist;
+    f32 dist2;
+    f32 dist3;
+    f32 dist4;
+    switch(o->oAction) {
+        case 0:
+            if(controllerMagnitude > 5.0f) {
+                    o->oMoveAngleYaw = ukiki_move_to_intended_yaw(atan2s(-gPlayer1Controller->stickY, gPlayer1Controller->stickX) + gLakituState.yaw);
+                    o->oForwardVel = controllerMagnitude / 1.5f;
+            } else {
+               
+                if(o->oForwardVel > 0) {
+                    o->oForwardVel -= 8.0f;
+                }
+                if(o->oForwardVel < 0) {
+                    o->oForwardVel = 0.0f;
+                }
+            }
+            o->oWallHitboxRadius = 50.0f;
+            if(!(o->oMoveFlags & OBJ_MOVE_IN_AIR) || o->oPosY - o->oFloorHeight < 50.0f) {
+                // if(gPlayer1Controller->buttonPressed & Z_TRIG) {
+                //     cur_obj_init_animation(WARIO_ANIM_JUMP);
+                // }
+
+                mtxf_align_terrain_triangle(gCurrentObject->transform, &gCurrentObject->oPosX, gCurrentObject->oMoveAngleYaw, 60.f);
+                gCurrentObject->header.gfx.throwMatrix = &gCurrentObject->transform;
+                if(controllerMagnitude > 5.0f) {
+                    cur_obj_init_animation_with_sound(UKIKI_ANIM_RUN);
+                } else {
+                    cur_obj_init_animation_with_sound(UKIKI_ANIM_ITCH);
+                }
+                if(gPlayer1Controller->buttonPressed & A_BUTTON) {o->oVelY = 64.0f;}
+                if(o->oFloor != 0 && o->oFloor->type == SURFACE_DEATH_PLANE) {
+                    obj_mark_for_deletion(o);
+                    gCurrentCharacter = 0;
+                    set_mario_action(gMarioState, ACT_IDLE, 0);
+                }
+            } else {
+                cur_obj_init_animation_with_sound(UKIKI_ANIM_JUMP);
+                o->oGravity = -4.0f;
+            }
+
+            if(o->oVelY < -64.0f) {o->oVelY = -64.0f;}
+
+            break;
+    }
+    if(gPlayer1Controller->buttonPressed & START_BUTTON) {
+        obj_mark_for_deletion(o);
+        gCurrentCharacter = 0;
+        set_mario_action(gMarioState, ACT_IDLE, 0);
+    }
+    cur_obj_move_standard(78);
+    cur_obj_update_floor_and_walls_and_ceil(100.0f);
+    if(o->oVelY < -64.0f) {o->oVelY = -64.0f;}
+
+    o->oIntangibleTimer = 0;
+    o->oInteractStatus = 0;
+
+    coin = cur_obj_find_nearest_object_with_behavior(bhvYellowCoin, &dist);
+    if(dist < 200.0f) {
+        interact_coin(gMarioState, 0, coin);
+    }
+
+    //red coin
+    coin = cur_obj_find_nearest_object_with_behavior(bhvRedCoin, &dist);
+    if(dist < 200.0f) {
+        interact_coin(gMarioState, 0, coin);
+    }
+
+    //door im just lazy
+    coin = cur_obj_find_nearest_object_with_behavior(bhvDoor, &dist);
+    if(dist < 200.0f) {
+        set_mario_action(gMarioState, ACT_WALKING, 0);
+        interact_door(gMarioState, 0, coin);
+        o->oUkikiCageNextAction = 1;
+        o->oPosX += 5000.0f;
+        gCurrentCharacter = 0;
+    }
+
+    coin = cur_obj_find_nearest_object_with_behavior(bhvDoorWarp, &dist);
+    if(dist < 200.0f) {
+        set_mario_action(gMarioState, ACT_WALKING, 0);
+        interact_warp_door(gMarioState, 0, coin);
+        o->oUkikiCageNextAction = 1;
+        o->oPosX += 5000.0f;
+        gCurrentCharacter = 0;
+    }
+
+    //pipe im just lazy
+    star = cur_obj_find_nearest_object_with_behavior(bhvWarpPipe, &dist);
+    star2 = cur_obj_find_nearest_object_with_behavior(bhvWarp, &dist2);
+    if(dist2 < dist) {
+        dist = dist2;
+        star = star2;
+    }
+    if(dist < 200.0f) {
+        set_mario_action(gMarioState, ACT_IDLE, 0);
+        interact_warp(gMarioState, 0, star);
+        o->oUkikiCageNextAction = 1;
+        o->oPosY += 50000.0f;
+    }
+
+    star = 0;
+    star2 = 0;
+    star3 = 0;
+    star = cur_obj_find_nearest_object_with_behavior(bhvStar, &dist);
+    star2 = cur_obj_find_nearest_object_with_behavior(bhvStarSpawnCoordinates, &dist2);
+    star3 = cur_obj_find_nearest_object_with_behavior(bhvBowserKey, &dist3);
+    star4 = cur_obj_find_nearest_object_with_behavior(bhvGrandStar, &dist4);
+    if(dist2 < dist) {
+        dist = dist2;
+        star = star2;
+    }
+    if(dist3 < dist) {
+        dist = dist3;
+        star = star3;
+    }
+    if(dist4 < dist) {
+        dist = dist4;
+        star = star4;
+    }
+    if(dist < 150.0f) {
+        set_mario_action(gMarioState, ACT_IDLE, 0);
+        interact_star_or_key(gMarioState, 0, star);
+        o->oUkikiCageNextAction = 1;
+        o->oPosY += 50000.0f;
+    }
+
+    if(dist_between_objects(gMarioObject, o) < 100.0f) {
+        if(o->oUkikiHasCap != UKIKI_CAP_ON) {
+            gHudDisplay.timer = 0;
+            play_music(SEQ_PLAYER_LEVEL, SEQUENCE_ARGS(4, SEQ_LEVEL_SLIDE), 0);
+        }
+        o->oUkikiHasCap |= UKIKI_CAP_ON;
+        gMarioState->flags = 0;
+        gHudDisplay.flags |= HUD_DISPLAY_FLAG_TIMER;
+    }
+
+    if(gHudDisplay.flags & HUD_DISPLAY_FLAG_TIMER && o->oUkikiCageNextAction == 0) {
+        gHudDisplay.timer++;
+    }
+
+    if (o->oUkikiHasCap & UKIKI_CAP_ON) {
+        o->oAnimState = UKIKI_ANIM_STATE_CAP_ON;
+    } else {
+        o->oAnimState = UKIKI_ANIM_STATE_DEFAULT;
+    }
+}
+
+void bhv_ukiki_core_update(void) {
+    struct Waypoint *currWaypoint = 0;
+    struct Waypoint *targetWaypoint = 0;
+    f32 dist = 0;
+    f32 lowestDist = 64000.0f;
+    f32 epicX, epicY, epicZ;
+
+    o->oDrawingDistance = 640000.0f;
+    // if(o->oAction == 0) { //debug shit
+    //     o->oAction = 6;
+    //     gCurrentCharacter = CHARACTER_WARIO;
+    // }
+
+    if(o->oUkikiCageNextAction == 0) {
+        gCurrentCharacter = CHARACTER_UKIKI;
+    } else {
+        gCurrentCharacter = 0;
+    }
+
+    if(gCurrentCharacter == CHARACTER_UKIKI) {
+        gCurrentCharacter = CHARACTER_UKIKI;
+        gCamera->mode = CAMERA_MODE_8_DIRECTIONS;
+        gLakituState.mode = CAMERA_MODE_8_DIRECTIONS;
+        //set_mario_action(gMarioState, ACT_TRULY_NOTHING, 0);
+        if(o->oUkikiCageNextAction == 0) {
+            set_mario_action(gMarioState, ACT_WAITING_FOR_DIALOG, 0);
+            set_mario_animation(gMarioState, MARIO_ANIM_FIRST_PERSON);
+        }
+    }
+    if(o->oAction >= 0) {
+        ukiki_control();
+    }
+
+    exec_anim_sound_state(sUkikiSoundStates);
 }

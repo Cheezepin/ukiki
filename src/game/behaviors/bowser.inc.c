@@ -1690,6 +1690,15 @@ void bhv_bowser_loop(void) {
     s16 angleToMario;  // AngleToMario from Bowser's perspective
     s16 angleToCenter; // AngleToCenter from Bowser's perspective
 
+    f32 dist;
+    struct Object *ukiki = cur_obj_find_nearest_object_with_behavior(bhvUkikiControl, &dist);
+
+    if(o->oAction != BOWSER_ACT_TILT_LAVA_PLATFORM && dist < 250.0f) {
+        o->oHealth = 0;
+        if(o->oAction != BOWSER_ACT_DEAD)
+            o->oAction = BOWSER_ACT_DEAD;
+    }
+
     // Set distance/angle values
     o->oBowserDistToCenter = sqrtf(o->oPosX * o->oPosX + o->oPosZ * o->oPosZ);
     o->oBowserAngleToCenter = atan2s(0.0f - o->oPosZ, 0.0f - o->oPosX);
